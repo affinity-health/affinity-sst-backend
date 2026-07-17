@@ -6,7 +6,7 @@ A minimal TypeScript backend that wraps the Affinity API and deploys to AWS with
 
 The finished starter will show the smallest responsible way to place an application-specific API
 in front of Affinity. It will keep the Affinity API key on the server, authenticate callers, and
-expose a few narrow routes using the official [`@affinity/sdk`](https://github.com/affinity-health/affinity-typescript).
+expose a few narrow routes using the official [`@affinity-health/sdk`](https://github.com/affinity-health/affinity-typescript).
 
 ## Intended architecture
 
@@ -18,7 +18,7 @@ Your web or mobile app
 Amazon API Gateway
           |
           v
-AWS Lambda + Hono + @affinity/sdk
+AWS Lambda + Hono + @affinity-health/sdk
           |
           | Affinity service API key
           v
@@ -75,4 +75,3 @@ an authenticated custom backend and the Affinity API.
 
 - [Affinity TypeScript SDK](https://github.com/affinity-health/affinity-typescript)
 - [Affinity OpenAPI specification](https://github.com/affinity-health/affinity-openapi)
-
