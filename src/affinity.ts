@@ -1,13 +1,12 @@
 import { Affinity } from "@affinity-health/sdk";
+import { z } from "zod";
 
-const apiKey = process.env.AFFINITY_API_KEY?.trim();
-if (!apiKey) throw new Error("AFFINITY_API_KEY is required");
-if (!apiKey.startsWith("sk_test_")) {
-  throw new Error("This local tester only accepts an Affinity test-mode key");
-}
-const baseUrl = process.env.AFFINITY_API_BASE_URL ?? "https://api-staging.joinaffinityai.com";
+const env = z.object({
+  AFFINITY_API_KEY: z.string().trim().startsWith("sk_test_", "AFFINITY_API_KEY must start with 'sk_test_'"),
+  AFFINITY_API_BASE_URL: z.url().default("https://api.joinaffinityai.com"),
+}).parse(process.env);
 
-export const affinity = new Affinity(apiKey, {
+export const affinity = new Affinity(env.AFFINITY_API_KEY, {
   apiVersion: "2026-07-09",
-  baseUrl,
+  baseUrl: env.AFFINITY_API_BASE_URL,
 });

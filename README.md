@@ -1,8 +1,8 @@
 # Affinity TypeScript Backend Tester
 
 A deliberately tiny local oRPC + OpenAPI server for exercising the Affinity TypeScript SDK against
-the staging API. It is not an application backend, an authentication example, or a production
-proxy.
+the production API in test mode. It is not an application backend, an authentication example, or
+a production proxy.
 
 ## Setup
 
@@ -23,18 +23,22 @@ bun run dev
 ```
 
 Set `AFFINITY_API_KEY` in `.env` to an `sk_test_...` key. The local `.env` is ignored by Git.
-By default, the tester calls `https://api-staging.joinaffinityai.com`.
+By default, the tester calls `https://api.joinaffinityai.com`; the `sk_test_` key keeps all activity
+in test mode.
 
 ## Routes
 
 ```text
 GET /                                  Open the Scalar API reference
 GET /spec.json                         Read the generated OpenAPI document
-GET /access                            Inspect the current key and sandbox mode
+GET /access                            Inspect the current key and test mode
 GET /catalog?query=semaglutide&limit=10
 GET /practices?limit=25
-GET /orders?limit=25
+POST /practices
+GET /orders?practiceId=:practiceId&limit=25
+POST /orders
 GET /orders/:orderId
+POST /orders/:orderId/submit
 ```
 
 Try it with:
@@ -44,8 +48,12 @@ curl http://localhost:3000/access
 curl "http://localhost:3000/catalog?query=semaglutide&limit=5"
 ```
 
+The three mutation routes accept an `idempotencyKey` in their local JSON body. A complete test flow
+is: create a practice, create an order using its `practiceId`, retrieve the order, submit it, then
+list orders filtered by that practice.
+
 The server refuses to start with a live key. The SDK setup uses only the key, pinned API version,
-and staging base URL; it does not override `fetch`.
+and production base URL; it does not override `fetch`.
 
 ## Checks
 
