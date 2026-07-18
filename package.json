@@ -1,0 +1,24 @@
+{
+  "name": "affinity-sst-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/index.ts --target=bun --outdir=dist",
+    "check": "bun run check-types && bun test",
+    "check-types": "tsgo --noEmit",
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts"
+  },
+  "dependencies": {
+    "@affinity-health/sdk": "link:@affinity-health/sdk",
+    "@orpc/openapi": "^1.14.8",
+    "@orpc/server": "^1.14.8",
+    "@orpc/zod": "^1.14.8",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@types/bun": "latest",
+    "@typescript/native-preview": "latest"
+  }
+}

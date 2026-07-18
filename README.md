@@ -1,77 +1,59 @@
-# Affinity SST Backend
+# Affinity TypeScript Backend Tester
 
-A minimal TypeScript backend that wraps the Affinity API and deploys to AWS with SST.
+A deliberately tiny local oRPC + OpenAPI server for exercising the Affinity TypeScript SDK against
+the staging API. It is not an application backend, an authentication example, or a production
+proxy.
 
-> **Status:** This is a design scaffold. No application or infrastructure code has been added yet.
+## Setup
 
-The finished starter will show the smallest responsible way to place an application-specific API
-in front of Affinity. It will keep the Affinity API key on the server, authenticate callers, and
-expose a few narrow routes using the official [`@affinity-health/sdk`](https://github.com/affinity-health/affinity-typescript).
+The SDK is currently linked from the local `affinity-typescript` checkout rather than installed
+from npm:
 
-## Intended architecture
+```sh
+cd ../affinity-typescript
+bun install
+bun run build
+bun link
 
-```text
-Your web or mobile app
-          |
-          | application authentication
-          v
-Amazon API Gateway
-          |
-          v
-AWS Lambda + Hono + @affinity-health/sdk
-          |
-          | Affinity service API key
-          v
-Affinity API
+cd ../affinity-sst-backend
+bun install
+bun link @affinity-health/sdk
+cp .env.example .env
+bun run dev
 ```
 
-SST will define and deploy the API Gateway and Lambda resources. The application will use Hono for
-a small TypeScript HTTP layer and the Affinity TypeScript SDK for upstream requests.
+Set `AFFINITY_API_KEY` in `.env` to an `sk_test_...` key. The local `.env` is ignored by Git.
+By default, the tester calls `https://api-staging.joinaffinityai.com`.
 
-## Planned routes
-
-The first version will intentionally stay small:
-
-- `GET /catalog` — perform a server-side catalog search
-- `GET /practices` — list practices available to the integration
-- `GET /orders/:orderId` — retrieve one order for the authenticated application user
-
-The wrapper will return only the fields its application needs. It will not act as an unauthenticated
-proxy for arbitrary Affinity endpoints.
-
-## Planned configuration
+## Routes
 
 ```text
-AFFINITY_API_KEY       Affinity test service key stored as an SST secret
-AFFINITY_API_VERSION   Dated API version pinned by the backend
+GET /                                  Open the Scalar API reference
+GET /spec.json                         Read the generated OpenAPI document
+GET /access                            Inspect the current key and sandbox mode
+GET /catalog?query=semaglutide&limit=10
+GET /practices?limit=25
+GET /orders?limit=25
+GET /orders/:orderId
 ```
 
-The repository will default to Affinity test mode and contain no real patient or prescription
-fixtures.
+Try it with:
 
-## Why AWS
+```sh
+curl http://localhost:3000/access
+curl "http://localhost:3000/catalog?query=semaglutide&limit=5"
+```
 
-AWS Lambda and API Gateway provide a straightforward serverless deployment path and are currently
-listed by AWS as HIPAA-eligible services. Eligibility alone does not make a deployment compliant.
-Any integrator handling protected health information must establish the required agreements and
-configure authentication, encryption, logging, retention, access controls, and incident response
-for their own environment.
+The server refuses to start with a live key. The SDK setup uses only the key, pinned API version,
+and staging base URL; it does not override `fetch`.
 
-## Deliberately out of scope
+## Checks
 
-The initial starter will not include:
+```sh
+bun run check
+bun run build
+```
 
-- A frontend
-- A database or ORM
-- User-management screens
-- Queues or background workers
-- Production patient fixtures
-- A claim that deploying the repository makes an application HIPAA compliant
-
-Those choices belong to the integrating application. This repository is only the boundary between
-an authenticated custom backend and the Affinity API.
-
-## Related projects
-
-- [Affinity TypeScript SDK](https://github.com/affinity-health/affinity-typescript)
-- [Affinity OpenAPI specification](https://github.com/affinity-health/affinity-openapi)
+SST infrastructure is intentionally deferred. If this tester becomes a real starter application,
+SST, API Gateway, caller authentication, secret storage, and production operational controls can
+be added then.
