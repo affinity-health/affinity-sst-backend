@@ -1,4 +1,5 @@
-import { os } from "@orpc/server";
+import { ResponseError } from "@affinity-health/sdk";
+import { ORPCError, os } from "@orpc/server";
 import * as z from "zod";
 
 import { affinity } from "./affinity";
@@ -14,6 +15,36 @@ const address = z.object({
   state: z.string().trim().length(2),
 });
 
+async function callAffinity<T>(request: () => Promise<T>): Promise<T> {
+  try {
+    return await request();
+  } catch (error) {
+    if (!(error instanceof ResponseError)) {
+      throw error;
+    }
+
+    const body = await error.response
+      .clone()
+      .json()
+      .catch(() => null);
+    const problem = body && typeof body === "object" ? (body as Record<string, unknown>) : null;
+    const code = typeof problem?.code === "string" ? problem.code : "UPSTREAM_API_ERROR";
+    const message =
+      typeof problem?.detail === "string"
+        ? problem.detail
+        : typeof problem?.message === "string"
+          ? problem.message
+          : `Affinity API returned ${error.response.status}`;
+
+    throw new ORPCError(code, {
+      cause: error,
+      data: problem,
+      message,
+      status: error.response.status,
+    });
+  }
+}
+
 const access = os
   .route({
     method: "GET",
@@ -22,7 +53,7 @@ const access = os
     tags: ["Affinity"],
   })
   .output(sdkOutput)
-  .handler(() => affinity.account.retrieveAccess());
+  .handler(() => callAffinity(() => affinity.account.retrieveAccess()));
 
 const catalog = os
   .route({
@@ -38,7 +69,7 @@ const catalog = os
     }),
   )
   .output(sdkOutput)
-  .handler(({ input }) => affinity.catalog.list(input));
+  .handler(({ input }) => callAffinity(() => affinity.catalog.list(input)));
 
 const practices = os
   .route({
@@ -49,7 +80,7 @@ const practices = os
   })
   .input(z.object({ limit: z.coerce.number().int().min(1).max(100).default(25) }))
   .output(sdkOutput)
-  .handler(({ input }) => affinity.practices.list(input));
+  .handler(({ input }) => callAffinity(() => affinity.practices.list(input)));
 
 const practiceCreate = os
   .route({
@@ -79,7 +110,7 @@ const practiceCreate = os
   .output(sdkOutput)
   .handler(({ input }) => {
     const { idempotencyKey, ...practice } = input;
-    return affinity.practices.create(practice, { idempotencyKey });
+    return callAffinity(() => affinity.practices.create(practice, { idempotencyKey }));
   });
 
 const orders = os
@@ -96,7 +127,7 @@ const orders = os
     }),
   )
   .output(sdkOutput)
-  .handler(({ input }) => affinity.orders.list(input));
+  .handler(({ input }) => callAffinity(() => affinity.orders.list(input)));
 
 const orderCreate = os
   .route({
@@ -135,7 +166,7 @@ const orderCreate = os
   .output(sdkOutput)
   .handler(({ input }) => {
     const { idempotencyKey, ...order } = input;
-    return affinity.orders.create(order, { idempotencyKey });
+    return callAffinity(() => affinity.orders.create(order, { idempotencyKey }));
   });
 
 const order = os
@@ -147,7 +178,7 @@ const order = os
   })
   .input(z.object({ orderId: z.string().trim().min(1) }))
   .output(sdkOutput)
-  .handler(({ input }) => affinity.orders.retrieve(input.orderId));
+  .handler(({ input }) => callAffinity(() => affinity.orders.retrieve(input.orderId)));
 
 const orderSubmit = os
   .route({
@@ -159,7 +190,9 @@ const orderSubmit = os
   .input(z.object({ idempotencyKey, orderId: z.string().trim().min(1) }))
   .output(sdkOutput)
   .handler(({ input }) =>
-    affinity.orders.submit(input.orderId, { idempotencyKey: input.idempotencyKey }),
+    callAffinity(() =>
+      affinity.orders.submit(input.orderId, { idempotencyKey: input.idempotencyKey }),
+    ),
   );
 
 export const router = {
